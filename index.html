@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+    
+    <link rel="icon" href="/favicon.png" sizes="16x16 32x32" type="image/png">
+    <style>
+        *{
+            margin: 0;
+            padding: 0;
+            color: white;
+        }
+
+        body{
+            background-color: #312f2f;
+        }
+
+        .page-wrapper{
+            margin-left: 10%;
+            margin-right: 10%;
+            margin-top: 5%;
+        }
+
+        .infoText{
+            font-size: 24px;
+            display: inline;
+            margin-right: 10px;
+        }
+
+        .btn{
+            margin: 10px;
+            display: inline-block;
+        }
+
+        .titleText{
+            padding-top: 20px;
+        }
+    </style>
+
+    <title>Báo cháy IoT của ETE9</title>
+</head>
+<body>
+
+
+    <div class="page-wrapper">
+        <h1 style="text-align: center;">Máy báo cháy IoT - k64 ETE9</h1>
+        <div class="infoText" id="curTime">loading current date and time...</div>
+        <p>Dữ liệu trên thiết bị được cập nhật 10s một lần lên server. Dữ liệu trên màn hình 5s refresh một lần.</p>
+        <div>
+            <p id="curTempOutside" style="margin-bottom: 0;">Nhiệt độ ngoài trời hiện tại là:</p> 
+            <p style="display: inline;">(Dữ liệu được lấy từ <p style="color: tomato; display: inline;">openweathermap.org</p>)</p>
+        </div>
+
+        <h2 class="titleText">Các chỉ số hiện tại</h2>
+        <p>
+            <p class="fa fa-snowflake-o infoText" aria-hidden="true"></p>
+            <p class="infoText" id="curTemp">Nhiệt độ hiện tại là: </p>
+        </p>
+            
+        <p>
+            <p class="fa fa-tint infoText" aria-hidden="true"></p>
+            <div class="infoText" id="curHumid">Độ ẩm hiện tại là: </div>
+        </p>
+
+        <p>
+            <p class="fa fa-thermometer-three-quarters infoText infoText" aria-hidden="true"></p>
+            <div class="infoText" id="curConc">Nồng độ không khí hiện tại: </div>
+        </p>
+
+        <p>
+            <div style="display: inline-block;">
+                <p id="alertIcon" style="color: teal;" class="fa fa-check-circle infoText" aria-hidden="true"></p>
+            </div>
+            <div class="infoText" id="alertText">Cảnh báo nguy hiểm: không </div>
+        </p>
+
+        <p>Lưu ý nhiệt độ sẽ có sai số 1 độ C và độ ẩm sai số 1%</p>
+
+        <h2 class="titleText">Các nút chức năng</h2>
+        <div>
+            <form action="/api/tasks/changeStatus/ledCtrl/on" method="POST">
+                <input type="submit" value="Bật LED" class="btn btn-success">
+            </form>
+            
+            <form action="/api/tasks/changeStatus/ledCtrl/off" method="POST">
+                <input type="submit" value="Tắt LED" class="btn btn-danger">
+            </form>
+        </div>
+        
+        <p>
+            Tính năng thông báo đẩy: chưa có <br>
+            Thông báo qua mail: đang trong thử nghiệm <br>
+            Thông báo qua tin nhắn SMS: chưa có
+        </p>
+
+
+        <div style="padding-top: 300px;">
+            <img src="/logo1.jpg" style="height: 100px; margin-right: 20px;">
+            <img src="/logo2.png" style="height: 100px;">
+            <p style="margin-bottom: 0;">Ứng dụng viết bởi Phương và đồng bọn k64 ET-E9 ĐHBKHN </p>
+            <p>Sử dụng NodeMCU cùng các cảm biến và server Node.js</p>
+        </div>
+    </div>
+    
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        setInterval(()=>{
+            var socket = io.connect();
+
+            var today = new Date();
+            var date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
+            var time = today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
+            var dateTime = date+' '+time;
+
+            socket.on('sensorData', function(data){
+                console.log(data);
+                $('#curTemp').html("Nhiệt độ hiện tại là: " + data.sensorData[0] + " độ C");
+                $('#curHumid').html("Độ ẩm hiện tại là: " + data.sensorData[1] + "%");
+                $('#curConc').html("Nồng độ không khí hiện tại: " + data.sensorData[2]);
+                $('#curTime').html(dateTime);
+
+                if (data.sensorData[0] > 45 || data.sensorData[2] > 1500){
+                    $('#alertIcon').addClass("fa-exclamation-triangle").removeClass("fa-check-circle").css("color","yellow");
+                    $('#alertText').html("CÓ NGUY CƠ CHÁY !!");
+                    //send mail notification
+                }
+            });
+            console.log('-------');
+
+            var url = "http://api.openweathermap.org/data/2.5/weather?id=1581130&appid=<OPENWEATHER_APP_ID>";
+            function doGetJson() {
+                var aPromise = fetch(url);
+                aPromise
+                .then((response) => {
+                    console.log("OK! Server responsed.");
+                    
+                    if(!response.ok) {
+                        throw new Error("HTTP error, status = " + response.status);
+                    }
+                    var myJSON_promise = response.json();
+ 
+                    // Work with Promise object:
+                    myJSON_promise.then((myJSON) => {
+                        console.log("OK! JSON:");
+                        console.log(myJSON.main.temp);
+                        var tempOut = Math.round((myJSON.main.temp - 273) * 100) / 100;
+                        var tempFeel = Math.round((myJSON.main.feels_like - 273) * 100) / 100;
+                        $('#curTempOutside').html("Nhiệt độ ngoài trời hiện tại là: " + tempOut + " độ C " + "(feels like " + tempFeel + " độ C)"  );
+                    });
+                })
+                .catch((error) => {
+                    console.log("Noooooo! Something error:");
+                    console.log(error);
+                });
+            }
+            doGetJson();
+            
+
+        }, 5000);
+    </script>
+</body>
+</html>
